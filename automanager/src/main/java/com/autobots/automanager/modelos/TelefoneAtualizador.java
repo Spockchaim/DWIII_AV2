@@ -22,7 +22,7 @@ public class TelefoneAtualizador {
 		for (Telefone atualizacao : atualizacoes) {
 			for (Telefone telefone : telefones) {
 				if (atualizacao.getId() != null) {
-					if (atualizacao.getId() == telefone.getId()) {
+					if (atualizacao.getId().equals(telefone.getId())) {
 						atualizar(telefone, atualizacao);
 					}
 				}

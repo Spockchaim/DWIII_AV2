@@ -19,7 +19,11 @@ import com.autobots.automanager.modelos.ClienteAtualizador;
 import com.autobots.automanager.modelos.ClienteSelecionador;
 import com.autobots.automanager.repositorios.ClienteRepositorio;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
+@Tag(name = "Clientes", description = "Endpoints para gerenciamento de clientes (RMM Níveis 0 a 3 + HATEOAS)")
 public class ClienteControle {
 	@Autowired
 	private ClienteRepositorio repositorio;
@@ -28,67 +32,75 @@ public class ClienteControle {
 	@Autowired
 	private AdicionadorLinkCliente adicionadorLink;
 
+	@Operation(summary = "Obter cliente por ID", description = "Busca um cliente específico pelo ID e retorna seus dados com links HATEOAS")
 	@GetMapping("/cliente/{id}")
 	public ResponseEntity<Cliente> obterCliente(@PathVariable long id) {
 		List<Cliente> clientes = repositorio.findAll();
 		Cliente cliente = selecionador.selecionar(clientes, id);
 		if (cliente == null) {
-			ResponseEntity<Cliente> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
-			return resposta;
-		} else {
-			adicionadorLink.adicionarLink(cliente);
-			ResponseEntity<Cliente> resposta = new ResponseEntity<Cliente>(cliente, HttpStatus.FOUND);
-			return resposta;
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
+		adicionadorLink.adicionarLink(cliente);
+		return new ResponseEntity<>(cliente, HttpStatus.OK);
 	}
 
-	@GetMapping("/clientes")
+	@Operation(summary = "Listar todos os clientes", description = "Retorna a lista de todos os clientes cadastrados com links HATEOAS")
+	@GetMapping({ "/cliente/clientes", "/clientes" })
 	public ResponseEntity<List<Cliente>> obterClientes() {
 		List<Cliente> clientes = repositorio.findAll();
 		if (clientes.isEmpty()) {
-			ResponseEntity<List<Cliente>> resposta = new ResponseEntity<>(HttpStatus.NOT_FOUND);
-			return resposta;
-		} else {
-			adicionadorLink.adicionarLink(clientes);
-			ResponseEntity<List<Cliente>> resposta = new ResponseEntity<>(clientes, HttpStatus.FOUND);
-			return resposta;
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 		}
+		adicionadorLink.adicionarLink(clientes);
+		return new ResponseEntity<>(clientes, HttpStatus.OK);
 	}
 
+	@Operation(summary = "Cadastrar novo cliente", description = "Cria um novo cliente juntamente com seu endereço, documentos e telefones")
 	@PostMapping("/cliente/cadastro")
 	public ResponseEntity<?> cadastrarCliente(@RequestBody Cliente cliente) {
-		HttpStatus status = HttpStatus.CONFLICT;
+		if (cliente == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
 		if (cliente.getId() == null) {
 			repositorio.save(cliente);
-			status = HttpStatus.CREATED;
+			return new ResponseEntity<>(HttpStatus.CREATED);
 		}
-		return new ResponseEntity<>(status);
-
+		return new ResponseEntity<>(HttpStatus.CONFLICT);
 	}
 
+	@Operation(summary = "Atualizar cliente", description = "Atualiza dados cadastrais do cliente e de seus sub-recursos")
 	@PutMapping("/cliente/atualizar")
 	public ResponseEntity<?> atualizarCliente(@RequestBody Cliente atualizacao) {
-		HttpStatus status = HttpStatus.CONFLICT;
-		Cliente cliente = repositorio.getById(atualizacao.getId());
+		if (atualizacao == null || atualizacao.getId() == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		Cliente cliente = repositorio.findById(atualizacao.getId()).orElse(null);
 		if (cliente != null) {
 			ClienteAtualizador atualizador = new ClienteAtualizador();
 			atualizador.atualizar(cliente, atualizacao);
 			repositorio.save(cliente);
-			status = HttpStatus.OK;
-		} else {
-			status = HttpStatus.BAD_REQUEST;
+			return new ResponseEntity<>(HttpStatus.OK);
 		}
-		return new ResponseEntity<>(status);
+		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 
-	@DeleteMapping("/cliente/excluir")
-	public ResponseEntity<?> excluirCliente(@RequestBody Cliente exclusao) {
-		HttpStatus status = HttpStatus.BAD_REQUEST;
-		Cliente cliente = repositorio.getById(exclusao.getId());
+	@Operation(summary = "Excluir cliente por ID", description = "Remove um cliente pelo ID na URI e dispara exclusão em cascata")
+	@DeleteMapping("/cliente/excluir/{id}")
+	public ResponseEntity<?> excluirCliente(@PathVariable long id) {
+		Cliente cliente = repositorio.findById(id).orElse(null);
 		if (cliente != null) {
 			repositorio.delete(cliente);
-			status = HttpStatus.OK;
+			return new ResponseEntity<>(HttpStatus.OK);
 		}
-		return new ResponseEntity<>(status);
+		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+	}
+
+	@Operation(summary = "Excluir cliente via corpo JSON", description = "Remove um cliente informando o ID no corpo da requisição")
+	@DeleteMapping("/cliente/excluir")
+	public ResponseEntity<?> excluirCliente(@RequestBody Cliente exclusao) {
+		if (exclusao == null || exclusao.getId() == null) {
+			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		}
+		return excluirCliente(exclusao.getId());
 	}
 }

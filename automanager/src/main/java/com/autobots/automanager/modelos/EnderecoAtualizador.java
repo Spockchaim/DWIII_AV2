@@ -22,6 +22,9 @@ public class EnderecoAtualizador {
 			if (!verificador.verificar(atualizacao.getNumero())) {
 				endereco.setNumero(atualizacao.getNumero());
 			}
+			if (!verificador.verificar(atualizacao.getCodigoPostal())) {
+				endereco.setCodigoPostal(atualizacao.getCodigoPostal());
+			}
 			if (!verificador.verificar(atualizacao.getInformacoesAdicionais())) {
 				endereco.setInformacoesAdicionais(atualizacao.getInformacoesAdicionais());
 			}

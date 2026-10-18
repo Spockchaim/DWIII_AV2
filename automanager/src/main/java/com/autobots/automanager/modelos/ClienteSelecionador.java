@@ -11,7 +11,7 @@ public class ClienteSelecionador {
 	public Cliente selecionar(List<Cliente> clientes, long id) {
 		Cliente selecionado = null;
 		for (Cliente cliente : clientes) {
-			if (cliente.getId() == id) {
+			if (cliente.getId().equals(id)) {
 				selecionado = cliente;
 			}
 		}
